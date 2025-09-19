@@ -16,6 +16,7 @@ public class BibliotecaGUI extends JFrame {
     private ReproductorGUI reproductor;
     private DefaultListModel<Cancion> modeloLista;
     private JList<Cancion> listaVisual;
+    private Cancion cancionSeleccionada = null;//cancion marcada por select
 
     public BibliotecaGUI(ReproductorGUI reproductor, Lista lista) {
         this.reproductor = reproductor;
@@ -28,12 +29,6 @@ public class BibliotecaGUI extends JFrame {
         getContentPane().setBackground(Color.BLACK);
         setLayout(new BorderLayout());
 
-        JLabel titulo = new JLabel("Tu Biblioteca", SwingConstants.CENTER);
-        titulo.setForeground(Color.GREEN);
-        titulo.setFont(new Font("SansSerif", Font.BOLD, 22));
-        add(titulo, BorderLayout.NORTH);
-
-        // Modelo
         modeloLista = new DefaultListModel<>();
         Nodo tmp = lista.getInicio();
         while(tmp != null){
@@ -41,7 +36,7 @@ public class BibliotecaGUI extends JFrame {
             tmp = tmp.siguiente;
         }
 
-        // JList con renderer personalizado
+        //lista de canciones
         listaVisual = new JList<>(modeloLista);
         listaVisual.setCellRenderer(new ListCellRenderer<Cancion>() {
             @Override
@@ -49,7 +44,15 @@ public class BibliotecaGUI extends JFrame {
                                                           boolean isSelected, boolean cellHasFocus) {
                 JPanel panel = new JPanel(new BorderLayout(10, 0));
                 panel.setBorder(BorderFactory.createEmptyBorder(5,5,5,5));
-                panel.setBackground(isSelected ? Color.DARK_GRAY.darker() : Color.DARK_GRAY);
+
+                //fondo segun estado de cancion(cliqueada/seleccionada)
+                if(c.equals(cancionSeleccionada)){
+                    panel.setBackground(new Color(255, 255, 255, 100)); // blanco semitransparente
+                } else if(isSelected){
+                    panel.setBackground(Color.DARK_GRAY.brighter());
+                } else {
+                    panel.setBackground(Color.DARK_GRAY);
+                }
 
                 JLabel lblImg = new JLabel();
                 if(c.getImagenPath() != null && !c.getImagenPath().isEmpty()){
@@ -66,14 +69,14 @@ public class BibliotecaGUI extends JFrame {
                 panel.add(lblImg, BorderLayout.WEST);
 
                 JPanel info = new JPanel(new GridLayout(4,1));
-                info.setBackground(isSelected ? Color.DARK_GRAY.darker() : Color.DARK_GRAY);
+                info.setBackground(panel.getBackground()); // mismo fondo
                 JLabel lblTitulo = new JLabel("Título: " + c.getTitulo());
                 lblTitulo.setForeground(Color.GREEN);
                 JLabel lblArtista = new JLabel("Artista: " + c.getArtista());
                 lblArtista.setForeground(Color.GREEN);
                 JLabel lblGenero = new JLabel("Género: " + c.getGenero());
                 lblGenero.setForeground(Color.GREEN);
-                JLabel lblDuracion = new JLabel("Duración: " + c.getDuracion() + " seg");
+                JLabel lblDuracion = new JLabel("Duración: " + formatearDuracion(c.getDuracion()));
                 lblDuracion.setForeground(Color.GREEN);
                 info.add(lblTitulo);
                 info.add(lblArtista);
@@ -101,16 +104,27 @@ public class BibliotecaGUI extends JFrame {
         JButton eliminarBtn = crearBoton("Eliminar");
         JButton reproducirBtn = crearBoton("Reproducir");
         JButton regresarBtn = crearBoton("Regresar");
+        JButton selectBtn = crearBoton("Select"); // NUEVO botón
 
         agregarBtn.addActionListener(e -> agregarCancion());
         eliminarBtn.addActionListener(e -> eliminarCancion());
         reproducirBtn.addActionListener(e -> reproducirCancion());
         regresarBtn.addActionListener(e -> regresar());
+        selectBtn.addActionListener(e -> {
+            int idx = listaVisual.getSelectedIndex();
+            if(idx != -1){
+                cancionSeleccionada = modeloLista.getElementAt(idx);
+                listaVisual.repaint();
+            } else {
+                JOptionPane.showMessageDialog(this, "Selecciona primero una canción para marcarla.");
+            }
+        });
 
         panelBotones.add(agregarBtn);
         panelBotones.add(eliminarBtn);
         panelBotones.add(reproducirBtn);
         panelBotones.add(regresarBtn);
+        panelBotones.add(selectBtn);
 
         add(panelBotones, BorderLayout.SOUTH);
 
@@ -129,43 +143,44 @@ public class BibliotecaGUI extends JFrame {
 
     private void agregarCancion(){
         new IngresarCancionGUI(this, lista, modeloLista);
-        
     }
 
     private void eliminarCancion(){
-    int idx = listaVisual.getSelectedIndex();
-    if(idx != -1){
-        Cancion c = modeloLista.getElementAt(idx);
+        if(cancionSeleccionada != null){
+            if(reproductor.getTituloActual() != null &&
+               reproductor.getTituloActual().equals(cancionSeleccionada.getTitulo())) {
+                reproductor.stop();
+                reproductor.reset();
+            }
 
-        // Detener si se está reproduciendo usando solo el título
-        if(reproductor.getTituloActual() != null &&
-            reproductor.getTituloActual().equals(c.getTitulo())) {
-            reproductor.stop();
-            reproductor.reset();
+            lista.eliminar(cancionSeleccionada.getTitulo());
+            modeloLista.removeElement(cancionSeleccionada);
+            cancionSeleccionada = null; // limpiar selección
+            Almacenamiento.guardarLista(lista);
+        } else {
+            JOptionPane.showMessageDialog(this,"Debes seleccionar una canción con 'Select'.");
         }
-
-        lista.eliminar(c.getTitulo());
-        modeloLista.remove(idx);
-        Almacenamiento.guardarLista(lista);
-    } else {
-        JOptionPane.showMessageDialog(this,"Selecciona una canción para eliminar.");
     }
-}
 
     private void reproducirCancion(){
-        int idx = listaVisual.getSelectedIndex();
-        if(idx != -1){
-            Cancion c = modeloLista.getElementAt(idx);
+        if(cancionSeleccionada != null){
             reproductor.setVisible(true);
-            reproductor.seleccionarCancion(c);
+            reproductor.seleccionarCancion(cancionSeleccionada);
             this.dispose();
         } else {
-            JOptionPane.showMessageDialog(this,"Selecciona una canción para reproducir.");
+            JOptionPane.showMessageDialog(this,"Debes seleccionar una canción con 'Select'.");
         }
     }
 
     private void regresar(){
         reproductor.setVisible(true);
         this.dispose();
+    }
+
+    //formato 0:00 en vez de segundos
+    private String formatearDuracion(int segundos) {
+        int min = segundos / 60;
+        int seg = segundos % 60;
+        return String.format("%d:%02d", min, seg);
     }
 }

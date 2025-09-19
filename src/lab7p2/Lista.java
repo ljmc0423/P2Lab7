@@ -36,13 +36,13 @@ public class Lista implements Serializable{
             return;
         }
 
-        Nodo actual = inicio;
-        while (actual.siguiente != null) {
-            if (actual.siguiente.cancion.getTitulo().equals(nombreCancion)) {
-                actual.siguiente = actual.siguiente.siguiente;
+        Nodo tmp = inicio;
+        while (tmp.siguiente != null) {
+            if (tmp.siguiente.cancion.getTitulo().equals(nombreCancion)) {
+                tmp.siguiente = tmp.siguiente.siguiente;
                 return;
             }
-            actual = actual.siguiente;
+            tmp = tmp.siguiente;
         }
     }
     

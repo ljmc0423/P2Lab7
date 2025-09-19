@@ -8,24 +8,19 @@ import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.io.File;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
 
 /**
  *
  * @author ljmc2
  */
 
-import javax.swing.*;
-import javax.swing.filechooser.FileNameExtensionFilter;
-import java.awt.*;
-import java.io.File;
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-
 public class IngresarCancionGUI extends JFrame {
     private JTextField txtTitulo, txtArtista, txtDuracion, txtGenero;
     private JLabel lblPreviewImagen, lblArchivoMP3;
-    private String rutaImagen, rutaAudio; // ruta WAV final
+    private String rutaImagen, rutaAudio;//ruta wav tras conversión
 
     private Lista lista;
     private DefaultListModel<Cancion> modeloLista;
@@ -36,7 +31,7 @@ public class IngresarCancionGUI extends JFrame {
         this.modeloLista = modeloLista;
         this.biblioteca = biblioteca;
 
-        setTitle("Ingresar Canción");
+        setTitle("Ingresar canción");
         setSize(500, 600);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         getContentPane().setBackground(Color.BLACK);
@@ -138,7 +133,6 @@ public class IngresarCancionGUI extends JFrame {
         if(chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION){
             File file = chooser.getSelectedFile();
             try {
-                // Convertir a WAV automáticamente
                 File wavFile = Mp3toWAV.convertMp3ToWav(file);
                 rutaAudio = wavFile.getAbsolutePath();
                 lblArchivoMP3.setText(file.getName());
@@ -162,17 +156,18 @@ public class IngresarCancionGUI extends JFrame {
         try (AudioInputStream ais = AudioSystem.getAudioInputStream(new File(rutaAudio))) {
             AudioFormat format = ais.getFormat();
             duracionSeg = (long) (ais.getFrameLength() / format.getFrameRate());
-        } catch (Exception ex) {
-            ex.printStackTrace();
+        } catch (Exception e) {
+            e.getMessage();
         }
 
         Cancion c = new Cancion(titulo, artista, rutaImagen, rutaAudio, genero, (int) duracionSeg);
         lista.agregar(c);
         modeloLista.addElement(c);
 
-        JOptionPane.showMessageDialog(this, "Canción agregada correctamente.");
+        Almacenamiento.guardarLista(lista);
 
-        // Hacer visible la ventana padre (BibliotecaGUI)
+        JOptionPane.showMessageDialog(this, "Canción agregada.");
+
         if (biblioteca != null) {
             biblioteca.setVisible(true);
         }
